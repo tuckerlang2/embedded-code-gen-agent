@@ -1,0 +1,16 @@
+# Registry of supported boards. Add an entry here + a matching file in
+# hardware_reference/ before the agent can generate code for a new board.
+
+boards:
+  arduino_uno:
+    display_name: "Arduino Uno (R3)"
+    fqbn: "arduino:avr:uno"          # fully qualified board name for arduino-cli
+    toolchain: arduino-cli
+    logic_level_v: 5.0
+    reference_doc: hardware_reference/arduino_uno.md
+
+  raspberry_pi_4:
+    display_name: "Raspberry Pi 4"
+    toolchain: python               # RPi projects generate Python, not compiled sketches
+    logic_level_v: 3.3
+    reference_doc: hardware_reference/raspberry_pi_4.md
