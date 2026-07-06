@@ -21,7 +21,7 @@ def compile_arduino_sketch(code: str, fqbn: str) -> tuple[bool, str]:
         sketch_dir.mkdir()
         # arduino-cli requires the .ino file to match its parent folder name
         sketch_file = sketch_dir / "sketch.ino"
-        sketch_file.write_text(code)
+        sketch_file.write_text(code, encoding="utf-8")
 
         result = subprocess.run(
             ["arduino-cli", "compile", "--fqbn", fqbn, str(sketch_dir)],
