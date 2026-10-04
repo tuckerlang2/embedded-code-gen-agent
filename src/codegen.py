@@ -55,7 +55,7 @@ Constraints: {', '.join(spec.constraints) if spec.constraints else 'none'}
         prompt += f"\nThe previous attempt failed to compile with this error - fix it:\n{compile_error}"
 
     response = client.messages.create(
-        model="claude-sonnet-4-6",
+        model="claude-sonnet-5",
         max_tokens=2000,
         system=SYSTEM_PROMPT,
         messages=[{"role": "user", "content": prompt}],

@@ -14,3 +14,21 @@ boards:
     toolchain: python               # RPi projects generate Python, not compiled sketches
     logic_level_v: 3.3
     reference_doc: hardware_reference/raspberry_pi_4.md
+
+  raspberry_pi_zero_2w:
+    display_name: "Raspberry Pi Zero 2 W"
+    toolchain: python               # RPi projects generate Python, not compiled sketches
+    logic_level_v: 3.3
+    reference_doc: hardware_reference/raspberry_pi_zero_2w.md
+
+  esp32_devkitc_v4:
+    display_name: "ESP32 DevKitC V4 (WROOM-32)"
+    fqbn: "esp32:esp32:esp32"       # "ESP32 Dev Module" in arduino-cli / Arduino IDE
+    toolchain: arduino-cli
+    # Not an AVR-based board — requires the esp32 core installed separately:
+    #   arduino-cli config set board_manager.additional_urls \
+    #     https://raw.githubusercontent.com/espressif/arduino-esp32/gh-pages/package_esp32_index.json
+    #   arduino-cli core install esp32:esp32
+    core_install_note: "Requires esp32:esp32 core — not installed by default, see comment above"
+    logic_level_v: 3.3
+    reference_doc: hardware_reference/esp32_devkitc_v4.md
