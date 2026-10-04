@@ -54,3 +54,41 @@ Reconstructed from the actual code + an external record of the session.)
   protocol — the schema has no concept of a multi-board spec or shared
   protocol constants. Revisit if/when we want the generator (rather than
   hand-written + reviewed code) to produce both sides.
+
+## 2026-10-04 — Session 4: rover control software, first pass
+- Decided: rover/ is hand-written and reviewed, not agent-generated, for
+  the reason flagged in Session 3. Revisit only if there's real appetite
+  to extend spec_schema.py for multi-board specs with shared protocol
+  constants.
+- Designed and documented the Pi<->ESP32 serial protocol
+  (rover/PROTOCOL.md): 5-byte binary frames, 50Hz drive frames from Pi
+  (doubling as heartbeat), 5Hz telemetry frames from ESP32, additive
+  checksum, 400ms ESP32-side watchdog that forces the Sabertooth to
+  neutral independent of the Pi.
+- Wrote rover/esp32_firmware/esp32_firmware.ino: parses drive frames,
+  relays to Sabertooth via simplified serial (UART2), reads the soil
+  probe on ADC1 (GPIO34), drives the probe servo (GPIO13, ESP32Servo
+  lib), enforces the watchdog, sends telemetry. NOT YET COMPILED — this
+  dev environment has no arduino-cli/ESP32 toolchain and installing one
+  here failed (network allowlist blocked the installer). Must be
+  compiled and reviewed locally before flashing; see rover/README.md.
+- Wrote rover/pi/protocol.py (frame encode/decode) and
+  rover/pi/drive_controller.py (gamepad -> serial loop, arcade-drive
+  mixing, Pi-side link watchdog that sends stop on gamepad disconnect).
+- Actually tested what's testable in this environment: wrote
+  rover/pi/test_protocol.py (6 tests, all passing — checksum validation,
+  signed-byte round-trip, corruption rejection, resync behavior) and
+  smoke-tested drive_controller.py's pure logic (deadzone, arcade
+  mixing, no-gamepad startup path) directly. The live serial+gamepad
+  loop itself has NOT run against real hardware.
+- One test bug found and fixed during this: an early resync test
+  asserted a stronger guarantee than PROTOCOL.md actually makes (that a
+  real frame would always survive a stray sync byte landing in the
+  immediately preceding garbage) — fixed the test to match the
+  documented, correct guarantee (recovery within one more frame cycle),
+  not the firmware/parser.
+- Next step: get this onto real hardware. Bench-test the watchdog
+  (unplug Pi link mid-drive, confirm motors stop within ~400ms with
+  wheels off the ground) before anything drives on grass. Then: Pi
+  camera capture, phone UI, GPS/route planning (still deliberately
+  deferred).
