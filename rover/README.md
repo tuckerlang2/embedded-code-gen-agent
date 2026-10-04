@@ -69,6 +69,54 @@ adjust.
    project's non-negotiable human-review-before-flash rule.
 4. Flash: `arduino-cli upload -p <port> --fqbn esp32:esp32:esp32 esp32_firmware/`
 
+## Deferred scope: obstacle detection + status LEDs + probe limit switches
+(Added 2026-10-04. Explicitly NOT built now — this is a note for later,
+after mechanical assembly and basic manual-drive operation are working.
+Revisit once there's appetite to scale from manual driving toward more
+autonomous/route-based operation — this is additive to that, not to the
+current "short mowed grass, no obstacle handling" scope.)
+
+Planned additions: 3x ultrasonic distance sensors (front/left/right),
+3x status LEDs, 2x limit switches for the soil probe's extend/retract
+travel.
+
+**Voltage warning, confirm before wiring:** classic HC-SR04-style
+ultrasonic sensors run on 5V and their ECHO pin outputs a 5V signal — the
+ESP32 is 3.3V-only and NOT 5V tolerant. Either use a 3.3V-native
+ultrasonic module, or put a voltage divider on each ECHO line. Don't
+wire ECHO straight to a GPIO.
+
+**Scope question to resolve before building, not after:** are the
+ultrasonic sensors for passive logging/awareness, or active obstacle
+avoidance (rover stops/reroutes on detection)? The latter is real
+decision-logic, not just a sensor read — reopens the "no obstacle
+handling" scope decision deliberately, rather than accidentally.
+
+**Pin budget already worked out** (not yet in the firmware), chosen to
+avoid flash pins (6-11), use input-only pins (34/35/36/39) for ECHO
+lines since ECHO is a pure input anyway, and keep I2C (21/22) free for
+a future GPS/sensor module:
+
+| Function | Pin |
+|---|---|
+| Ultrasonic 1 (front) TRIG / ECHO | GPIO4 / GPIO36 |
+| Ultrasonic 2 (left) TRIG / ECHO | GPIO14 / GPIO39 |
+| Ultrasonic 3 (right) TRIG / ECHO | GPIO18 / GPIO35 |
+| Status LED 1 | GPIO2 (shares the DevKitC's onboard LED) |
+| Status LED 2 | GPIO15 (strapping pin — brief boot flicker possible, fine for a non-critical LED) |
+| Status LED 3 | GPIO23 |
+| Probe extend limit switch | GPIO25 |
+| Probe retract limit switch | GPIO26 |
+
+11 new pins + the 6 already in use (Pi link, Sabertooth link, soil ADC,
+servo) = 17 of 32 broken-out GPIO. GPIO21/22 (I2C), 0, 5, 12, 19, 27,
+32, 33 stay free as margin.
+
+Assumed "extend/retract sensors" = two binary limit switches (mechanical
+end-stops), not continuous position feedback. If continuous position is
+actually wanted later, that's a different sensor (e.g. a potentiometer)
+on an analog pin, not a digital input — confirm which before wiring.
+
 ## Before this drives real motors
 - Confirm the Sabertooth's DIP-switch baud rate actually matches
   `SABERTOOTH_BAUD` (9600) in the firmware — this was an assumption
