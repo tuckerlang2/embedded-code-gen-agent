@@ -92,3 +92,25 @@ Reconstructed from the actual code + an external record of the session.)
   wheels off the ground) before anything drives on grass. Then: Pi
   camera capture, phone UI, GPS/route planning (still deliberately
   deferred).
+- Worked out but explicitly deferred: pin budget for 3x ultrasonic
+  distance sensors, 3x status LEDs, 2x soil-probe limit switches —
+  logged in rover/README.md's "Deferred scope" section, not built.
+  Flagged a real voltage-mismatch risk (classic HC-SR04 ECHO is 5V,
+  ESP32 is 3.3V-only) and an open question (passive logging vs. active
+  obstacle avoidance) to resolve before wiring, not after.
+
+## 2026-10-04 — Session 5: first hardware bring-up
+- ESP32 firmware compiled and flashed successfully on real hardware
+  (Arduino IDE, ESP32 Dev Module board, esp32:esp32 core + ESP32Servo
+  library). Fixed an upload-time error along the way: Arduino IDE was
+  defaulting to a board definition that uses DFU/native-USB upload
+  ("No DFU capable USB device available") because the esp32:esp32 core
+  wasn't installed yet, so it fell back to a different ESP32 board
+  package. Installing the esp32:esp32 core and explicitly selecting
+  "ESP32 Dev Module" fixed it.
+- This satisfies the project's compile-check-before-review requirement
+  for this file. Runtime behavior is still unverified — nothing has
+  been bench-tested yet (no physical testing until solder/terminal
+  breakout boards arrive).
+- Next step: once hardware's in hand, bench-test the watchdog first
+  (wheels off the ground) before anything else.

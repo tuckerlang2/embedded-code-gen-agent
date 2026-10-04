@@ -14,8 +14,9 @@ rover/
   PROTOCOL.md              - the Pi<->ESP32 wire protocol. Read this first.
   esp32_firmware/
     esp32_firmware.ino      - ESP32 firmware: drive relay, watchdog, soil
-                               probe, servo. NOT YET COMPILE-VERIFIED (see
-                               below).
+                               probe, servo. Compiles and flashes clean
+                               (user-verified 2026-10-04). Behavior on
+                               real hardware not yet tested (see below).
   pi/
     protocol.py              - frame encode/decode, shared by drive_controller.py
     drive_controller.py       - gamepad -> serial drive loop
@@ -25,23 +26,23 @@ rover/
 
 ## Status as of 2026-10-04
 - Protocol designed and documented (`PROTOCOL.md`).
-- ESP32 firmware written. Structurally sound (balanced braces/parens,
-  logic reviewed) but **not compiled** — this dev environment has no
-  `arduino-cli`/ESP32 toolchain and I couldn't install one here. You
-  must run `arduino-cli compile --fqbn esp32:esp32:esp32
-  esp32_firmware/` locally (with the `esp32:esp32` core and
-  `ESP32Servo` library installed — see comment block at the top of the
-  .ino) before trusting this on real hardware. This project's own
-  CLAUDE.md rule is compile-check before human review before flashing —
-  that hasn't happened yet for this file.
+- ESP32 firmware: compiles and flashes clean on real hardware (Arduino
+  IDE, ESP32 Dev Module board selection, esp32:esp32 core + ESP32Servo
+  library) — user-verified. This satisfies the project's compile-check
+  requirement. Runtime behavior (watchdog, Sabertooth output, servo,
+  soil ADC) is NOT yet verified — no physical testing has happened yet
+  (waiting on solder/terminal breakout boards). Don't treat "it flashed"
+  as "it works correctly" — compiling clean only rules out syntax/type
+  errors, not logic errors or wiring mismatches.
 - Pi-side `protocol.py` has real unit test coverage, run and passing
   (`python3 test_protocol.py` or `pytest`).
 - `drive_controller.py`'s pure logic (deadzone, arcade-drive mixing,
   no-gamepad startup path) was smoke-tested directly. The live serial +
-  gamepad loop in `main()` has NOT been run against real hardware — no
-  ESP32 or gamepad attached to this environment.
+  gamepad loop in `main()` has NOT been run against real hardware yet.
 - Not yet built: GPS/route planning (explicitly deferred, per the
   project's scope decisions), camera capture on the Pi, phone UI.
+- See "Deferred scope" section below for obstacle sensors/LEDs/limit
+  switches — explicitly not being built yet, noted for later.
 
 ## Running the Pi side
 ```bash
