@@ -25,11 +25,12 @@ SEND_HZ = 50
 SEND_INTERVAL_S = 1.0 / SEND_HZ
 
 # Joystick axis indices are NOT standardized across controllers/OSes.
-# These match a typical Xbox-layout controller on Linux (left stick Y =
-# axis 1, right stick X = axis 2) -- confirm against the printed axis
-# count/values at startup and adjust if your controller differs.
+# Confirmed 2026-10-10 against the T47 controller (Xbox-mode, SDL mapping)
+# via debug_gamepad.py: axis 0/1 = left stick X/Y, axis 2 = left trigger
+# (NOT a stick -- rests at -1), axis 3/4 = right stick X/Y, axis 5 = right
+# trigger. Re-confirm with debug_gamepad.py if you swap controllers.
 THROTTLE_AXIS = 1   # left stick, vertical
-TURN_AXIS = 2        # right stick, horizontal
+TURN_AXIS = 3        # right stick, horizontal (was wrongly 2 -- that's the left trigger)
 DEADZONE = 0.08       # ignore stick drift near center
 
 # Buttons that command the probe servo. Adjust indices to match your
