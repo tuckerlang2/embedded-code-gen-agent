@@ -114,3 +114,53 @@ Reconstructed from the actual code + an external record of the session.)
   breakout boards arrive).
 - Next step: once hardware's in hand, bench-test the watchdog first
   (wheels off the ground) before anything else.
+
+## 2026-10-10 — Session 6: first confirmed motor movement, two real bugs found and fixed
+- Fixed `TURN_AXIS` in `drive_controller.py`: was `2` (the left trigger, not
+  the right stick), left over from Session 4's assumed-not-measured Xbox
+  mapping. Confirmed correct value (axis 3) against the actual controller
+  in use (an "ACE GAMER T47" clone, Xbox-mode) with a new throwaway
+  `rover/pi/debug_gamepad.py` script. This alone likely explained why
+  turning produced no motor response even when throttle worked.
+- Found and fixed a real USB hub power issue on the Pi: the controller's
+  USB dongle was throwing `usb_submit_urb failed` / `dwc_otg_hcd` timeout
+  errors in `dmesg`, consistent with a bus-powered hub unable to supply
+  keyboard+mouse+controller+ESP32 simultaneously on a Pi Zero 2 W's
+  limited USB power budget. Not yet fully resolved -- a powered hub would
+  fix this properly; see Open decisions below.
+- Hit and fixed an unrelated ESP32 cable issue separately (bad/charge-only
+  USB-C cable was preventing `/dev/ttyUSB0` from enumerating at all).
+- Hit real git repo corruption on the Pi's clone (`.git/objects` had an
+  undecodable loose object, `error: inflate: data stream error`) coinciding
+  exactly with `drive_controller.py` getting truncated to 0 bytes on disk.
+  Disk had plenty of free space (19% used), so not a disk-full cause --
+  likely an SD card hiccup or unclean shutdown. Fixed by deleting and
+  re-cloning the repo fresh on the Pi (did not attempt to repair the
+  corrupt git object). Flagging the Pi's SD card as worth watching if this
+  recurs -- could indicate card wear.
+- Root-caused "Sabertooth status LED green, zero motor movement" symptom:
+  it was NOT a Sabertooth/wiring problem. The ESP32 itself was stuck in a
+  boot loop (`rst:0x10 RTCWDT_RTC_RESET`, hanging at the identical flash
+  read address every cycle -- confirmed via raw serial capture showing the
+  ESP32's own ROM bootloader banner repeating instead of ever reaching
+  `loop()`), almost certainly from a corrupted/bad firmware image on
+  flash (plausibly from the same underlying instability that corrupted the
+  Pi's git repo around the same time -- not confirmed as the same root
+  event, but suspicious timing). Fixed by a full "Erase All Flash Before
+  Sketch Upload" + reflash in Arduino IDE. Along the way, Windows had lost
+  the CP210x USB-UART driver binding on the PC used to reflash (Device
+  Manager Code 28) -- reinstalling the Silicon Labs CP210x VCP driver
+  fixed that; this was unrelated to the ESP32 itself, confirmed because
+  the Pi's Linux kernel driver for the same chip never had an issue.
+- Confirmed via telemetry: ESP32 now boots clean, sends valid telemetry
+  frames, and correctly reports `watchdog_tripped` based on whether valid
+  drive frames are arriving.
+- Result: motors confirmed driving from the gamepad for the first time.
+- Open decisions / not yet done: get a powered USB hub for the Pi side
+  (current bus-powered hub is marginal -- see controller USB errors
+  above). Bench-test the watchdog (wheels off ground, unplug Pi<->ESP32
+  link, confirm motors stop within ~400ms) -- still not done, now that
+  driving actually works this becomes the next real safety-relevant step
+  before any unsupervised operation. Removed the temporary debug print
+  added mid-session to `drive_controller.py` once the Pi-send-side was
+  confirmed working.

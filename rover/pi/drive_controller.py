@@ -146,11 +146,6 @@ def main():
             frame = encode_drive_frame(left_speed, right_speed, servo_cmd)
             ser.write(frame)
 
-            # TEMP DEBUG (2026-10-10): confirm actual outgoing values while
-            # diagnosing "no motor movement" -- remove once resolved.
-            if left_speed != 0 or right_speed != 0:
-                print(f"DEBUG sending: left={left_speed} right={right_speed} servo={servo_cmd} frame={frame.hex()}")
-
             # Drain and parse any telemetry bytes waiting in the input
             # buffer. Non-blocking (timeout=0 on the Serial object).
             incoming = ser.read(256)

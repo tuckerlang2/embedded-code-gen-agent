@@ -24,21 +24,29 @@ rover/
     requirements.txt
 ```
 
-## Status as of 2026-10-04
+## Status as of 2026-10-10
 - Protocol designed and documented (`PROTOCOL.md`).
 - ESP32 firmware: compiles and flashes clean on real hardware (Arduino
   IDE, ESP32 Dev Module board selection, esp32:esp32 core + ESP32Servo
-  library) — user-verified. This satisfies the project's compile-check
-  requirement. Runtime behavior (watchdog, Sabertooth output, servo,
-  soil ADC) is NOT yet verified — no physical testing has happened yet
-  (waiting on solder/terminal breakout boards). Don't treat "it flashed"
-  as "it works correctly" — compiling clean only rules out syntax/type
-  errors, not logic errors or wiring mismatches.
+  library). Runtime confirmed working: ESP32 boots clean and sends valid
+  telemetry. (Earlier hit a boot loop from a bad/corrupted flash image —
+  fixed by a full erase + reflash. See PROGRESS.md Session 6.)
 - Pi-side `protocol.py` has real unit test coverage, run and passing
   (`python3 test_protocol.py` or `pytest`).
-- `drive_controller.py`'s pure logic (deadzone, arcade-drive mixing,
-  no-gamepad startup path) was smoke-tested directly. The live serial +
-  gamepad loop in `main()` has NOT been run against real hardware yet.
+- `drive_controller.py`: **motors confirmed driving from the gamepad for
+  the first time** (2026-10-10). `TURN_AXIS` was fixed (was reading the
+  left trigger, not the right stick — see PROGRESS.md Session 6 for the
+  full debugging trail covering a flaky USB hub, a bad cable, a corrupted
+  git clone, and the ESP32 boot loop, all encountered along the way).
+- **NOT yet done: the watchdog bench test** (wheels off the ground, unplug
+  the Pi<->ESP32 link mid-drive, confirm motors stop within ~400ms on
+  their own). This is the next required step before any unsupervised
+  driving — see "Before this drives real motors" below.
+- Known issue, not yet fixed: the Pi's USB hub is likely underpowered —
+  the gamepad showed USB errors (`usb_submit_urb failed`) in `dmesg`
+  consistent with current starvation when driving keyboard+mouse+
+  controller+ESP32 simultaneously off a bus-powered hub. A powered hub
+  (own power supply) is recommended before relying on this for real use.
 - Not yet built: GPS/route planning (explicitly deferred, per the
   project's scope decisions), camera capture on the Pi, phone UI.
 - See "Deferred scope" section below for obstacle sensors/LEDs/limit
