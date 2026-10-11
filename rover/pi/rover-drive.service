@@ -1,0 +1,19 @@
+[Unit]
+Description=Rover drive controller (gamepad -> ESP32 serial)
+After=multi-user.target
+
+[Service]
+Type=simple
+User=bighonker
+WorkingDirectory=/home/bighonker/embedded-code-gen-agent/rover/pi
+ExecStart=/home/bighonker/embedded-code-gen-agent/rover/pi/venv/bin/python3 /home/bighonker/embedded-code-gen-agent/rover/pi/drive_controller.py --port /dev/ttyUSB0
+# drive_controller.py exits with status 1 if it can't open the serial port
+# (e.g. ESP32 not enumerated yet at boot) -- restart-on-failure handles
+# that race instead of needing a fixed boot delay.
+Restart=on-failure
+RestartSec=5
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

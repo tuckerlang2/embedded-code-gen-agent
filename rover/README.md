@@ -53,11 +53,35 @@ rover/
   switches — explicitly not being built yet, noted for later.
 
 ## Running the Pi side
+Manually, for testing:
 ```bash
 cd rover/pi
 pip install -r requirements.txt
 python3 drive_controller.py --port /dev/ttyUSB0   # adjust port as needed
 ```
+
+### Auto-start on boot (systemd)
+`rover-drive.service` runs `drive_controller.py` automatically at boot and
+restarts it if it exits (e.g. the ESP32 hadn't enumerated as `/dev/ttyUSB0`
+yet at boot time -- it'll keep retrying every 5s). Install it once:
+```bash
+sudo cp rover-drive.service /etc/systemd/system/
+sudo systemctl daemon-reload
+sudo systemctl enable --now rover-drive.service
+```
+Check it's running and watch its logs:
+```bash
+sudo systemctl status rover-drive.service
+journalctl -u rover-drive.service -f
+```
+Stop/disable it (e.g. to go back to running it manually for debugging):
+```bash
+sudo systemctl stop rover-drive.service
+sudo systemctl disable rover-drive.service
+```
+The service file hardcodes the `bighonker` user and the repo path under
+their home directory -- edit `User=` and the paths in
+`rover-drive.service` if either ever changes, then `daemon-reload` again.
 Check `ls /dev/tty*` after plugging in the ESP32 to find its actual
 device name — it may enumerate as `/dev/ttyUSB0` or `/dev/ttyACM0`
 depending on the specific board's USB-serial chip.
