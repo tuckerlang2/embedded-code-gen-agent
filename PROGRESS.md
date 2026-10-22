@@ -164,3 +164,54 @@ Reconstructed from the actual code + an external record of the session.)
   before any unsupervised operation. Removed the temporary debug print
   added mid-session to `drive_controller.py` once the Pi-send-side was
   confirmed working.
+
+## 2026-10-11 — Session 7: auto-start on boot
+- Added `rover/pi/rover-drive.service` (systemd unit) so
+  `drive_controller.py` survives a power cycle without manually
+  restarting it -- the gap that prompted this was the rover going
+  silent after a power-off/on because nothing was re-launching the
+  script. `Restart=on-failure` / `RestartSec=5` handles the ESP32 not
+  having enumerated as `/dev/ttyUSB0` yet at boot, instead of a fixed
+  delay.
+- Discussed (not built): a phone-based status/control app for future
+  battery indicator, remote shutdown button, trip-time logging, etc.
+  Flagged two real hardware gaps up front rather than discovering them
+  later: (1) battery % needs a fuel-gauge IC or ADC voltage divider --
+  nothing today reports battery state; (2) remote power-ON from fully
+  off is not just software -- the Pi's GPIO isn't live when off, so it
+  needs a UPS/power-management HAT (e.g. PiJuice) or a separate latching
+  relay circuit, not an app button alone. Remote shutdown (software-only,
+  via a scoped sudoers rule) and trip logging are straightforward
+  whenever this gets built.
+- Decided: driving stays on the gamepad, not a phone touchscreen UI --
+  wired/local USB input over WiFi for the safety-relevant control path.
+
+## 2026-10-22 — Session 8: camera stream for phone FPV viewing
+- User's direction: skip the watchdog bench test for now -- this build
+  target is an investor demo, not unsupervised field driving. Explicit,
+  not an oversight; logged here so it isn't mistaken for one later.
+  Revisit before any driving beyond a controlled demo.
+- Wrote `rover/pi/camera_stream.py`: live MJPEG stream from the Pi
+  Camera Module 3 (IMX708, autofocus, chosen over v2/HQ/Wide variants
+  for autofocus at variable soil/plant distance without v2's fixed focus
+  or HQ's bulkier fixed-mount form factor) via `picamera2`, viewable in
+  a phone browser (`http://<pi-ip>:8080/`). Deliberately decoupled from
+  `drive_controller.py`/`protocol.py`/the ESP32 link -- this is a
+  view-only addition for FPV-style driving (phone for video, gamepad for
+  control), and losing the stream does not touch the drive-safety path.
+  Use case: 3D-printed bracket mounting the phone to the Xbox controller.
+- Added `rover/pi/rover-camera.service` for boot auto-start, same
+  Restart=on-failure pattern as rover-drive.service, but running the
+  system python3 (not the venv) since `picamera2` is an apt package tied
+  to libcamera, not pip-installable -- not added to requirements.txt for
+  that reason.
+- NOT YET RUN on real hardware -- no arduino-cli-style toolchain here for
+  picamera2/libcamera either; needs the camera module physically
+  connected to the Pi's CSI port and `sudo apt install python3-picamera2`
+  before first real test. Default resolution (640x480) and bitrate
+  (4 Mbps) are a starting guess for keeping latency low over the Pi Zero
+  2 W's WiFi for FPV use -- not measured against real driving conditions
+  yet.
+- Next step: test the stream on actual hardware, confirm latency is
+  usable for driving-by-video, then revisit the watchdog test before
+  this goes beyond a demo setting.

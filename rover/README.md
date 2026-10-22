@@ -20,6 +20,8 @@ rover/
   pi/
     protocol.py              - frame encode/decode, shared by drive_controller.py
     drive_controller.py       - gamepad -> serial drive loop
+    camera_stream.py          - live MJPEG stream for phone FPV viewing (view-only,
+                                 no interaction with drive_controller.py or the ESP32 link)
     test_protocol.py          - unit tests for protocol.py (passing)
     requirements.txt
 ```
@@ -47,8 +49,14 @@ rover/
   consistent with current starvation when driving keyboard+mouse+
   controller+ESP32 simultaneously off a bus-powered hub. A powered hub
   (own power supply) is recommended before relying on this for real use.
+- Camera: `camera_stream.py` written (Pi Camera Module 3 / IMX708, MJPEG
+  over HTTP, view in a phone browser at `http://<pi-ip>:8080/`). **NOT yet
+  run on real hardware** -- needs the camera module physically connected
+  to the Pi's CSI port and `picamera2` installed before first test. See
+  "Camera: FPV phone viewing" below.
 - Not yet built: GPS/route planning (explicitly deferred, per the
-  project's scope decisions), camera capture on the Pi, phone UI.
+  project's scope decisions), phone UI for drive control (gamepad is the
+  chosen input for now -- see PROGRESS.md).
 - See "Deferred scope" section below for obstacle sensors/LEDs/limit
   switches — explicitly not being built yet, noted for later.
 
@@ -92,6 +100,56 @@ script prints the connected controller's name/axis count/button count
 at startup — if driving feels wrong (e.g. turning does nothing, or the
 wrong stick drives), check that printout against the constants and
 adjust.
+
+## Camera: FPV phone viewing
+Pi Camera Module 3 (Standard, IMX708, autofocus) connected to the Pi's CSI
+ribbon port. `camera_stream.py` serves a live MJPEG feed for viewing in a
+phone browser while driving with the gamepad -- flying it "like a drone,"
+phone for eyes, controller for hands. **View-only**: it has no connection
+to `drive_controller.py`, `protocol.py`, or the ESP32 link, and losing the
+video feed does not affect drive safety (the ESP32's watchdog, per
+PROTOCOL.md, is independent of this).
+
+Setup (one-time):
+```bash
+sudo apt install -y python3-picamera2
+# picamera2 is a system package tied to libcamera -- installed via apt,
+# not pip, and not in requirements.txt / the venv for this reason.
+```
+Enable the camera interface if not already on (`sudo raspi-config` ->
+Interface Options -> Camera, or it may be auto-detected on recent
+Raspberry Pi OS with no explicit enable step needed -- check
+`libcamera-hello --list-cameras` to confirm the Pi sees it before
+troubleshooting the stream itself).
+
+Manually, for testing:
+```bash
+cd rover/pi
+python3 camera_stream.py --port 8080
+```
+Then on your phone, same WiFi network as the Pi, go to `http://<pi-ip>:8080/`.
+
+Auto-start on boot, same pattern as `rover-drive.service`:
+```bash
+sudo cp rover-camera.service /etc/systemd/system/
+sudo systemctl daemon-reload
+sudo systemctl enable --now rover-camera.service
+```
+
+**Not yet tuned:** default is 640x480 to keep latency low over the Pi
+Zero 2 W's WiFi for FPV-style driving -- raise resolution/bitrate
+(`--width`/`--height`/`--bitrate`) only after confirming the lower
+setting's actual latency is acceptable to you in practice; this hasn't
+been measured on real hardware yet. If the Pi's WiFi is shared with
+anything else driving to/from it, expect that to compete for the same
+bandwidth.
+
+**Known gap, accepted for this prototype (2026-10-22):** the watchdog
+bench test (see "Before this drives real motors" below) has NOT been
+done. User's explicit call: this build is for an investor demo, not
+unsupervised field use, and the watchdog test is being skipped for now
+rather than gating the demo. Revisit before any driving beyond a
+controlled demo setting.
 
 ## Flashing the ESP32 side
 1. Install the `esp32:esp32` arduino-cli core and the `ESP32Servo`

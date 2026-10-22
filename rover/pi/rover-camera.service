@@ -1,0 +1,18 @@
+[Unit]
+Description=Rover camera MJPEG stream (phone FPV view)
+After=multi-user.target
+
+[Service]
+Type=simple
+User=bighonker
+WorkingDirectory=/home/bighonker/embedded-code-gen-agent/rover/pi
+ExecStart=/usr/bin/python3 /home/bighonker/embedded-code-gen-agent/rover/pi/camera_stream.py --port 8080
+# picamera2 is a system package (apt), not in the venv -- run with the
+# system python3, not venv/bin/python3 like rover-drive.service does.
+Restart=on-failure
+RestartSec=5
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target
