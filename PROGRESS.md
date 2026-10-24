@@ -215,3 +215,52 @@ Reconstructed from the actual code + an external record of the session.)
 - Next step: test the stream on actual hardware, confirm latency is
   usable for driving-by-video, then revisit the watchdog test before
   this goes beyond a demo setting.
+
+## 2026-10-23/24 — Session 9: first real hardware test, camera dropout chased, flip added
+- First real power-cycle-after-sitting test: after a day powered off,
+  the rover didn't drive. Root cause: `rover-drive.service` had been
+  pushed to the repo but never actually installed on the Pi (`systemctl
+  status` returned "could not be found") -- Session 7 created the file
+  but installation was never confirmed done. Installed and enabled it
+  now; confirmed the Xbox controller showing "Player 2" on its LED is a
+  Windows Xinput-slot artifact, not relevant to Linux/pygame joystick
+  enumeration -- ruled out as a cause, not the actual issue.
+- Same gap existed for `rover-camera.service` -- also never installed.
+  Installing it surfaced a real hardware fault: `rpicam-hello
+  --list-cameras` returned "No cameras available," i.e. the CSI
+  connection had failed entirely (not previously tested after the
+  config fix from Session 8 -- that session confirmed detection once,
+  right after the fix, but this was the first test after a power-cycle
+  and physical handling in between).
+- Diagnosed: not a resource conflict (`ps aux` showed nothing else
+  holding the camera), not CMA memory exhaustion (256MB reserved,
+  confirmed via `dmesg | grep cma`, far more than 640x480 needs), not
+  Pi power/undervoltage (`vcgencmd get_throttled` stayed `0x0` across
+  multiple checks, including one timed right after a fresh pipeline
+  failure). Power-cycling the Pi (never hot-plugging the CSI cable --
+  confirmed this can damage the sensor/interface) and reseating the
+  ribbon cable at both ends restored detection.
+- After reseating, hit a second, different symptom: the service stayed
+  "active (running)" per systemd (so no crash/restart), but libcamera
+  logged "Camera frontend has timed out! Please check that your camera
+  sensor connector is attached securely. Alternatively, try another
+  cable and/or sensor" partway through streaming (~45s in), after which
+  the capture pipeline silently stopped producing frames while the
+  HTTP server kept running -- i.e. the stream looked "up" to systemd but
+  was actually dead. This is a real gap in `camera_stream.py`: no
+  watchdog/restart logic for a stalled-but-not-crashed capture pipeline.
+  Not fixed this session -- flagging as a known gap, not resolved.
+- User reported the stream working after being told to mount the camera
+  upside-down to route the CSI cable in its physical position. Added a
+  `--flip` CLI option to `camera_stream.py` (libcamera `Transform`,
+  180-degree rotation) so the video displays right-side up despite the
+  inverted mount; `rover-camera.service` now passes `--flip` by default.
+  Root cause of the earlier timeout was NOT conclusively isolated
+  (cable damage vs. strain from the upside-down mounting position vs.
+  something else, since power was ruled out) -- stream is working now,
+  but this is a watch item, not a confirmed fix. If it recurs, the
+  cable (possibly stressed by the upside-down mount) is the next thing
+  to swap, not something to re-diagnose from scratch.
+- Confirmed again: watchdog bench test still not done, per the
+  project's own explicit decision to skip it for the current investor-
+  demo build (see Session 8).

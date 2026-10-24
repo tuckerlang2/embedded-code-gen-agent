@@ -49,11 +49,19 @@ rover/
   consistent with current starvation when driving keyboard+mouse+
   controller+ESP32 simultaneously off a bus-powered hub. A powered hub
   (own power supply) is recommended before relying on this for real use.
-- Camera: `camera_stream.py` written (Pi Camera Module 3 / IMX708, MJPEG
-  over HTTP, view in a phone browser at `http://<pi-ip>:8080/`). **NOT yet
-  run on real hardware** -- needs the camera module physically connected
-  to the Pi's CSI port and `picamera2` installed before first test. See
-  "Camera: FPV phone viewing" below.
+- Camera: `camera_stream.py` running on real hardware (Pi Camera Module 3
+  / IMX708, MJPEG over HTTP, viewable in a phone browser at
+  `http://<pi-ip>:8080/`). Mounted upside-down to route the CSI cable --
+  use `--flip` (on by default in `rover-camera.service`) so the stream
+  displays right-side up. **Known gap, not yet fixed:** the capture
+  pipeline can silently stall mid-stream (libcamera logs "Camera frontend
+  has timed out") while systemd still reports the service as "active" --
+  root cause not conclusively isolated (ruled out: resource conflict, CMA
+  memory, Pi undervoltage; suspected but unconfirmed: cable strain from
+  the upside-down mount). If the stream goes dark without the service
+  restarting, this is why -- `sudo systemctl restart rover-camera.service`
+  is the workaround for now. See "Camera: FPV phone viewing" below and
+  PROGRESS.md Session 9 for the full diagnostic trail.
 - Not yet built: GPS/route planning (explicitly deferred, per the
   project's scope decisions), phone UI for drive control (gamepad is the
   chosen input for now -- see PROGRESS.md).
