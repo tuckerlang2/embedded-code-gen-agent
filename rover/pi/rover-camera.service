@@ -6,7 +6,7 @@ After=multi-user.target
 Type=simple
 User=bighonker
 WorkingDirectory=/home/bighonker/embedded-code-gen-agent/rover/pi
-ExecStart=/usr/bin/python3 /home/bighonker/embedded-code-gen-agent/rover/pi/camera_stream.py --port 8080
+ExecStart=/usr/bin/python3 /home/bighonker/embedded-code-gen-agent/rover/pi/camera_stream.py --port 8080 --flip
 # picamera2 is a system package (apt), not in the venv -- run with the
 # system python3, not venv/bin/python3 like rover-drive.service does.
 Restart=on-failure

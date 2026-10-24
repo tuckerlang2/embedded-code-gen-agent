@@ -30,6 +30,7 @@ try:
     from picamera2 import Picamera2
     from picamera2.encoders import MJPEGEncoder
     from picamera2.outputs import FileOutput
+    from libcamera import Transform
 except ImportError:
     print("picamera2 not found. Install it with:", file=sys.stderr)
     print("  sudo apt install -y python3-picamera2", file=sys.stderr)
@@ -123,11 +124,17 @@ def main():
                          help="MJPEG target bitrate in bits/sec. Lower this "
                               "if the Pi Zero 2 W's WiFi can't keep up "
                               "(stream will stutter/lag instead of erroring).")
+    parser.add_argument("--flip", action="store_true",
+                         help="Rotate the image 180 degrees -- use this if the "
+                              "camera is physically mounted upside down (e.g. "
+                              "to route the CSI cable), so the stream still "
+                              "appears right-side up.")
     args = parser.parse_args()
 
     picam2 = Picamera2()
     video_config = picam2.create_video_configuration(
-        main={"size": (args.width, args.height)}
+        main={"size": (args.width, args.height)},
+        transform=Transform(hflip=args.flip, vflip=args.flip),
     )
     picam2.configure(video_config)
 
