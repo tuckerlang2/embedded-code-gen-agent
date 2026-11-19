@@ -264,3 +264,47 @@ Reconstructed from the actual code + an external record of the session.)
 - Confirmed again: watchdog bench test still not done, per the
   project's own explicit decision to skip it for the current investor-
   demo build (see Session 8).
+
+## 2026-11-19 — Session 10: 4WD conversion, second Sabertooth 2x12
+- User is converting the rover from 2WD to 4WD skid-steer and has the
+  second Sabertooth 2x12 motor driver in hand.
+- Researched whether a native 4-channel driver exists in this power
+  class before committing to two separate units: checked the
+  Sabertooth product line (2x10 -> 2x12 -> 2x25 [discontinued] ->
+  2x32, all dual-channel) and Basicmicro RoboClaw (also dual-channel
+  only). No 4-channel equivalent found -- two dual-channel units, one
+  per axle, is the standard approach, not a workaround. Also flagged
+  (unresolved, informational only -- user already bought a matching
+  2x12): the newer Sabertooth 2x32 uses USB/DEScribe software
+  configuration rather than DIP switches, and whether it supports
+  "Simplified Serial" the same way as the 2x12 could not be confirmed
+  -- buying a second 2x12 sidesteps this risk entirely.
+- Architecture: FRONT Sabertooth (existing, Serial2/GPIO17) keeps
+  driving front-left/front-right; REAR Sabertooth (new) added on
+  Serial1, remapped to GPIO19 TX / GPIO27 RX (both were already listed
+  as free "margin" pins in `rover/README.md`'s deferred-scope pin
+  table, now consumed). Both Sabertooths receive IDENTICAL left/right
+  speed bytes every frame -- `PROTOCOL.md`'s frame format needed NO
+  change, since it already only carries two logical speed values.
+- Updated this session: `esp32_firmware.ino` (dual-Sabertooth init in
+  `setup()`, both `sendSabertoothDrive()`/`sendSabertoothStop()` now
+  write to both UARTs), `PROTOCOL.md` (added a short 4WD note pointing
+  at the firmware and wiring diagram, no frame-format change),
+  `rover/README.md` (status section, pin budget, "before this drives
+  real motors" checklist), and new `rover/wiring_diagram.md` (Mermaid
+  block diagram of the dual-Sabertooth wiring).
+- **NOT done this session, flagged explicitly in the updated docs, not
+  silently assumed:** (1) the updated firmware has not been compiled
+  or flashed on real hardware; (2) whether the hardware E-stop relay's
+  cut covers both Sabertooths' power feed or only the original one --
+  a new, real safety question introduced by this conversion, not a
+  pre-existing item; (3) the REAR unit's DIP-switch mode/baud has not
+  been physically verified against the firmware's 9600-baud simplified-
+  serial assumption (same open item the FRONT unit already had,
+  unresolved); (4) the watchdog bench test, already explicitly deferred
+  per the investor-demo decision (Session 8), is a bigger physical
+  event on 4 motors than 2 -- worth the user reconsidering, not
+  re-decided here.
+- Next step: physically wire the REAR Sabertooth per
+  `wiring_diagram.md`, verify both units' DIP switches, confirm E-stop
+  coverage, then compile/flash/test before any driving.

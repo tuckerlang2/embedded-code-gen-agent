@@ -10,6 +10,14 @@ This document only covers the Pi<->ESP32 link. The ESP32<->Sabertooth
 link is a separate, standard protocol (Sabertooth simplified serial) —
 see the comment block in `esp32_firmware/esp32_firmware.ino` for that.
 
+**4WD note (added 2026-11-19):** the ESP32 now relays to two Sabertooth
+2x12 units (front axle / rear axle) instead of one, each getting
+identical `left_speed`/`right_speed` values every frame. This frame
+format did NOT change for that — it already carried only two logical
+speed values, not one per wheel, so going from 2 to 4 motors is purely
+an ESP32-side wiring/relay change. See `esp32_firmware.ino` and
+`rover/wiring_diagram.md` for the two-Sabertooth wiring.
+
 ## Physical link
 USB, Pi to ESP32's onboard USB-serial bridge (ESP32 UART0 / GPIO1 TX,
 GPIO3 RX — see `hardware_reference/esp32_devkitc_v4.md`). Appears on the

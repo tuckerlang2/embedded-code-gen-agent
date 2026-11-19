@@ -12,11 +12,16 @@ protocol, which isn't something to hand to an LLM per-side independently.
 ```
 rover/
   PROTOCOL.md              - the Pi<->ESP32 wire protocol. Read this first.
+  wiring_diagram.md         - 4WD/dual-Sabertooth wiring block diagram.
   esp32_firmware/
-    esp32_firmware.ino      - ESP32 firmware: drive relay, watchdog, soil
-                               probe, servo. Compiles and flashes clean
-                               (user-verified 2026-10-04). Behavior on
-                               real hardware not yet tested (see below).
+    esp32_firmware.ino      - ESP32 firmware: drive relay (now to TWO
+                               Sabertooths, front+rear axle, as of the
+                               2026-11-19 4WD conversion), watchdog, soil
+                               probe, servo. Last confirmed compile/flash
+                               was on the pre-4WD, single-Sabertooth
+                               version (user-verified 2026-10-04) — the
+                               4WD firmware change has NOT yet been
+                               compiled or flashed on real hardware.
   pi/
     protocol.py              - frame encode/decode, shared by drive_controller.py
     drive_controller.py       - gamepad -> serial drive loop
@@ -26,13 +31,31 @@ rover/
     requirements.txt
 ```
 
-## Status as of 2026-10-10
+## Status as of 2026-11-19 — 4WD / dual-Sabertooth conversion
+- **Drivetrain converted from 2WD to 4WD skid-steer, second Sabertooth
+  2x12 now in hand.** No native 4-channel driver exists in this power
+  class (checked the Sabertooth line and Basicmicro RoboClaw — both
+  dual-channel only), so the standard approach applies: one Sabertooth
+  per axle, FRONT (existing unit, Serial2/GPIO17) and REAR (new unit,
+  remapped Serial1/GPIO19 TX). Both axles get identical left/right
+  speed commands every frame, which is what keeps zero-turn working and
+  is why `PROTOCOL.md`'s frame format needed no change. Firmware updated
+  in `esp32_firmware.ino`; see `wiring_diagram.md` for the wiring.
+  **NOT YET compiled, flashed, or run on real hardware** — this is a
+  code/doc update only, done ahead of the physical rewiring.
+- **Open before power-up, not yet answered:** (1) does the hardware
+  E-stop relay's cut cover BOTH Sabertooths' power feed, or only the
+  original one — needs checking on the actual wiring, not assumed; (2)
+  the REAR Sabertooth's DIP-switch mode/baud has never been physically
+  verified against the firmware's `SABERTOOTH_BAUD` (9600) assumption,
+  same open item the FRONT unit already had.
 - Protocol designed and documented (`PROTOCOL.md`).
-- ESP32 firmware: compiles and flashes clean on real hardware (Arduino
-  IDE, ESP32 Dev Module board selection, esp32:esp32 core + ESP32Servo
-  library). Runtime confirmed working: ESP32 boots clean and sends valid
-  telemetry. (Earlier hit a boot loop from a bad/corrupted flash image —
-  fixed by a full erase + reflash. See PROGRESS.md Session 6.)
+- ESP32 firmware (pre-4WD, single-Sabertooth version): compiled and
+  flashed clean on real hardware (Arduino IDE, ESP32 Dev Module board
+  selection, esp32:esp32 core + ESP32Servo library). Runtime confirmed
+  working: ESP32 boots clean and sends valid telemetry. (Earlier hit a
+  boot loop from a bad/corrupted flash image — fixed by a full erase +
+  reflash. See PROGRESS.md Session 6.)
 - Pi-side `protocol.py` has real unit test coverage, run and passing
   (`python3 test_protocol.py` or `pytest`).
 - `drive_controller.py`: **motors confirmed driving from the gamepad for
@@ -207,9 +230,10 @@ a future GPS/sensor module:
 | Probe extend limit switch | GPIO25 |
 | Probe retract limit switch | GPIO26 |
 
-11 new pins + the 6 already in use (Pi link, Sabertooth link, soil ADC,
-servo) = 17 of 32 broken-out GPIO. GPIO21/22 (I2C), 0, 5, 12, 19, 27,
-32, 33 stay free as margin.
+11 new pins + the 8 already in use (Pi link, FRONT + REAR Sabertooth
+links, soil ADC, servo — GPIO19/27 were consumed by the REAR Sabertooth
+in the 2026-11-19 4WD conversion and are no longer free) = 19 of 32
+broken-out GPIO. GPIO21/22 (I2C), 0, 5, 12, 32, 33 stay free as margin.
 
 Assumed "extend/retract sensors" = two binary limit switches (mechanical
 end-stops), not continuous position feedback. If continuous position is
@@ -217,14 +241,27 @@ actually wanted later, that's a different sensor (e.g. a potentiometer)
 on an analog pin, not a digital input — confirm which before wiring.
 
 ## Before this drives real motors
-- Confirm the Sabertooth's DIP-switch baud rate actually matches
+- Confirm BOTH Sabertooths' DIP-switch baud rate actually matches
   `SABERTOOTH_BAUD` (9600) in the firmware — this was an assumption
-  (Sabertooth's simplified-serial factory default), not something read
-  off your actual unit's switches.
+  (Sabertooth's simplified-serial factory default) for the original
+  unit and has never been verified for it either; the new REAR unit
+  has the identical open item, not a free pass because it's new.
+- Compile and flash the updated (4WD, dual-Sabertooth) firmware — not
+  yet done on real hardware as of 2026-11-19.
+- Confirm common ground between the ESP32 and the new REAR Sabertooth,
+  and that it has its own B+/B- power feed (not daisy-chained off the
+  FRONT unit's terminals).
+- **Confirm whether the hardware E-stop relay's cut covers both
+  Sabertooths' main power feed, or only the original (FRONT) one.** If
+  it only covers one, the E-stop no longer stops the rover — this is a
+  real safety gap introduced by the 4WD conversion specifically, not a
+  pre-existing item, and needs checking on the actual wiring before
+  first power-up.
 - Bench-test the watchdog: with the rover's wheels off the ground,
   start driving, then unplug the ESP32's USB-to-Pi link (not the
   motor power) and confirm the drivetrain stops within ~400ms on its
-  own, with no Pi involvement.
-- Confirm the hardware E-stop (the physical NC pushbutton relay on the
-  Sabertooth's main feed) still works independent of all of the above —
-  it does not and should not run through either board's software.
+  own, with no Pi involvement. (Still skipped per the project's
+  explicit investor-demo decision — see "Known gap, accepted for this
+  prototype" above — but the 4WD change is a new reason to reconsider
+  that, since a watchdog or E-stop failure on a 4-motor rover is a
+  bigger physical event than on the original 2-motor one.)

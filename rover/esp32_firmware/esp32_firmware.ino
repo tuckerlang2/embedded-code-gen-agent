@@ -4,8 +4,15 @@
  * Real-time I/O co-processor firmware for the yard-monitoring rover.
  * Runs on an ESP32 DevKitC V4. Responsibilities:
  *   - Receive drive commands from the Pi over USB serial (UART0) and
- *     relay them to a Sabertooth 2x12 motor controller over a single TTL
- *     serial line (Sabertooth "simplified serial" mode).
+ *     relay them to TWO Sabertooth 2x12 motor controllers over two
+ *     independent TTL serial lines (Sabertooth "simplified serial"
+ *     mode) -- 4WD skid-steer, added 2026-11-19. One Sabertooth per
+ *     axle: FRONT (M1=front-left, M2=front-right) and REAR (M1=rear-
+ *     left, M2=rear-right). Both receive the IDENTICAL left/right
+ *     speed values every frame -- this is what preserves zero-turn
+ *     capability, and it's also why PROTOCOL.md's frame format did not
+ *     need to change: it already only carries two logical speed
+ *     values (left/right), never four per-wheel values.
  *   - Read a capacitive soil moisture probe on the native ADC.
  *   - Drive the probe-actuation servo.
  *   - Enforce a watchdog: if the Pi stops sending valid commands, force
@@ -34,15 +41,31 @@
 // reassign these pins to anything else.
 #define PI_SERIAL_BAUD 115200
 
-// UART2, used here as the Sabertooth link. TX only -- Sabertooth
+// UART2, the FRONT Sabertooth link (the original, single-Sabertooth
+// unit from before the 4WD conversion). TX only -- Sabertooth
 // simplified serial is receive-only, so Serial2's RX pin (GPIO16) is
 // wired but unused.
-#define SABERTOOTH_TX_PIN 17
-#define SABERTOOTH_RX_PIN 16  // unused, Sabertooth doesn't talk back
-// ASSUMPTION, confirm against the Sabertooth's actual DIP switch
+#define SABERTOOTH_FRONT_TX_PIN 17
+#define SABERTOOTH_FRONT_RX_PIN 16  // unused, Sabertooth doesn't talk back
+
+// UART1, the REAR Sabertooth link (new, added for the 4WD conversion).
+// Serial1's default pins conflict with onboard flash, so it's remapped
+// here to GPIO19 (TX) / GPIO27 (RX, unused) -- both were already
+// reserved as free "margin" pins in this file's own pin budget (see
+// rover/README.md's "Deferred scope" pin table) before this change
+// consumed them. Confirmed safe per hardware_reference/esp32_devkitc_v4.md:
+// neither is a flash pin (6-11) or a strapping pin.
+#define SABERTOOTH_REAR_TX_PIN 19
+#define SABERTOOTH_REAR_RX_PIN 27  // unused, Sabertooth doesn't talk back
+
+// ASSUMPTION, confirm against each Sabertooth's actual DIP switch
 // setting before first use: simplified serial baud rates are selectable
 // via onboard DIP switches (common options: 2400/9600/19200/38400).
 // 9600 is the Sabertooth factory default for simplified serial mode.
+// The REAR unit is a second, separately-purchased 2x12 -- its DIP
+// switches have NOT been physically verified against this assumption
+// any more than the FRONT unit's have. Check both before first power-up,
+// not just the new one.
 #define SABERTOOTH_BAUD 9600
 
 // ADC1 channel (safe to use alongside WiFi, though this project doesn't
@@ -90,7 +113,8 @@ int lastServoAngle = -1;
 
 void setup() {
   Serial.begin(PI_SERIAL_BAUD);
-  Serial2.begin(SABERTOOTH_BAUD, SERIAL_8N1, SABERTOOTH_RX_PIN, SABERTOOTH_TX_PIN);
+  Serial2.begin(SABERTOOTH_BAUD, SERIAL_8N1, SABERTOOTH_FRONT_RX_PIN, SABERTOOTH_FRONT_TX_PIN);
+  Serial1.begin(SABERTOOTH_BAUD, SERIAL_8N1, SABERTOOTH_REAR_RX_PIN, SABERTOOTH_REAR_TX_PIN);
 
   analogReadResolution(12);                       // 0-4095, explicit rather than relying on core default
   analogSetPinAttenuation(SOIL_PROBE_PIN, ADC_11db); // full ~0-3.3V input range
@@ -178,6 +202,11 @@ void enforceWatchdog() {
 
 // ---------------------------------------------------------------------
 // Sabertooth simplified-serial output
+//
+// Both Sabertooths get the SAME m1/m2 bytes every call -- that's the
+// entire mechanism for keeping 4WD skid-steer (incl. zero-turn) working
+// with no protocol or drive-logic change: front-left and rear-left are
+// just two motors wired to run together, likewise front-right/rear-right.
 // ---------------------------------------------------------------------
 void sendSabertoothDrive(int8_t leftPercent, int8_t rightPercent) {
   uint8_t m1 = (uint8_t)map(leftPercent, -100, 100, 1, 127);
@@ -193,13 +222,17 @@ void sendSabertoothDrive(int8_t leftPercent, int8_t rightPercent) {
   m1 = constrain(m1, 1, 127);
   m2 = constrain(m2, 128, 255);
 
-  Serial2.write(m1);
+  Serial2.write(m1);  // FRONT Sabertooth: M1=front-left, M2=front-right
   Serial2.write(m2);
+  Serial1.write(m1);  // REAR Sabertooth: M1=rear-left, M2=rear-right
+  Serial1.write(m2);
 }
 
 void sendSabertoothStop() {
   Serial2.write((uint8_t)SABERTOOTH_M1_STOP);
   Serial2.write((uint8_t)SABERTOOTH_M2_STOP);
+  Serial1.write((uint8_t)SABERTOOTH_M1_STOP);
+  Serial1.write((uint8_t)SABERTOOTH_M2_STOP);
 }
 
 // ---------------------------------------------------------------------
