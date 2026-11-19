@@ -4,6 +4,49 @@ Block diagram of the 2026-11-19 4WD conversion — shows signal and power
 relationships, not a wire-gauge/connector-level schematic. Pin numbers
 match `esp32_firmware.ino` and `hardware_reference/esp32_devkitc_v4.md`.
 
+Note: the I/O co-processor board here is the **ESP32 DevKitC V4**, not
+an Arduino — the ESP32 pin numbers below are the ones that matter for
+this build. (If you're ever adding a Sabertooth to an actual Arduino
+Uno/Mega board instead, the pin numbers are different and 5V-tolerant,
+unlike the ESP32 — don't reuse these numbers on different hardware.)
+
+## New pins to add for the second (REAR) Sabertooth
+
+Only **one new ESP32 pin carries a real signal** — Sabertooth
+simplified serial is receive-only, so the "RX" pin below is wired for
+completeness/future use but currently carries nothing.
+
+| Connection | ESP32 pin | Sabertooth 2x12 (REAR) terminal | Notes |
+|---|---|---|---|
+| Serial signal (new) | **GPIO19** | S1 | This is the only new wire that actually does anything. Add it now. |
+| Serial RX (unused) | GPIO27 | — (not connected) | Reserved in firmware (`Serial1.begin(...)`) but Sabertooth never talks back. You can skip wiring this pin to anything; nothing listens on it. |
+| Ground (new) | Any ESP32 **GND** pin | 0V | Must be a *separate* ground wire from the FRONT Sabertooth's — see below, this is not optional. |
+
+For reference, what's already wired for the existing FRONT Sabertooth
+(unchanged by this conversion):
+
+| Connection | ESP32 pin | Sabertooth 2x12 (FRONT) terminal |
+|---|---|---|
+| Serial signal | GPIO17 | S1 |
+| Serial RX (unused) | GPIO16 | — (not connected) |
+| Ground | ESP32 GND | 0V |
+
+**Why GPIO19/27 and not the UART1 default pins:** ESP32's UART1 defaults
+to pins that conflict with the onboard SPI flash, so the firmware remaps
+it explicitly (`Serial1.begin(baud, SERIAL_8N1, 27, 19)`). GPIO19 and 27
+were already reserved as free "margin" pins in this repo's own pin
+budget before this conversion — confirmed against
+`hardware_reference/esp32_devkitc_v4.md`: neither is a flash pin
+(GPIO6–11) or a strapping pin (0/2/5/12/15), and GPIO19 is in that doc's
+list of safe general-purpose/PWM pins.
+
+**Don't skip the ground wire.** Each Sabertooth needs its own ground
+connection back to the ESP32 (or a shared ground bus the ESP32 is also
+on) — grounding only the FRONT unit and assuming the REAR unit "shares"
+it through the battery's power distribution is not reliable for a
+signal-level connection; a Sabertooth with a floating/indirect ground
+reference relative to the ESP32's TX pin can read garbled serial data.
+
 ```mermaid
 flowchart TD
     BATT["Battery pack"]
@@ -20,16 +63,16 @@ flowchart TD
     PI <--"USB serial, UART0\nGPIO1 TX / GPIO3 RX\n115200 baud"--> ESP
 
     SABF["Sabertooth 2x12 (FRONT)\nM1=front-left, M2=front-right\nDIP switches: assumed 9600 simplified\nserial, never independently checked"]
-    SABR["Sabertooth 2x12 (REAR)\nM1=rear-left, M2=rear-right\nDIP switches set IDENTICAL to FRONT\n(confirmed) -- same unverified baud\nassumption as FRONT, not a new one"]
+    SABR["Sabertooth 2x12 (REAR) -- NEW WIRING\nM1=rear-left, M2=rear-right\nDIP switches set IDENTICAL to FRONT\n(confirmed) -- same unverified baud\nassumption as FRONT, not a new one"]
 
-    ESP --"UART2 TX only, GPIO17\n9600 baud, simplified serial"--> SABF
-    ESP --"UART1 TX only, GPIO19\n(remapped from default pins)\n9600 baud, simplified serial"--> SABR
+    ESP --"existing: GPIO17 -> S1\n9600 baud, simplified serial"--> SABF
+    ESP =="NEW: GPIO19 -> S1\n(UART1, remapped from\ndefault pins)\n9600 baud, simplified serial"==> SABR
 
     PDB --"main power feed"--> SABF
     PDB --"main power feed\n(own feed, not daisy-chained\noff FRONT's terminals)"--> SABR
 
-    ESP =="common ground"== SABF
-    ESP =="common ground"== SABR
+    ESP =="existing: GND -> 0V"== SABF
+    ESP =="NEW: separate GND -> 0V\n(do not skip -- see notes)"== SABR
 
     FL["Front-left motor"]
     FR["Front-right motor"]
