@@ -43,12 +43,17 @@ rover/
   in `esp32_firmware.ino`; see `wiring_diagram.md` for the wiring.
   **NOT YET compiled, flashed, or run on real hardware** — this is a
   code/doc update only, done ahead of the physical rewiring.
-- **Open before power-up, not yet answered:** (1) does the hardware
-  E-stop relay's cut cover BOTH Sabertooths' power feed, or only the
-  original one — needs checking on the actual wiring, not assumed; (2)
-  the REAR Sabertooth's DIP-switch mode/baud has never been physically
-  verified against the firmware's `SABERTOOTH_BAUD` (9600) assumption,
-  same open item the FRONT unit already had.
+- **Resolved (2026-11-19, user-confirmed):** the hardware E-stop relay's
+  cut covers BOTH Sabertooths' power feed. The REAR unit's DIP switches
+  are set identically to the FRONT unit's. Note what this does and
+  doesn't settle: it rules out the E-stop-only-covers-one-unit failure
+  mode, and it means the two units won't disagree with each other — it
+  does NOT independently confirm that the shared DIP configuration
+  actually matches the firmware's `SABERTOOTH_BAUD` (9600, simplified
+  serial) assumption, since the FRONT unit's switches were never read
+  off and checked against that assumption in the first place (see
+  "Before this drives real motors" below — still open, now a single
+  shared item instead of two separate ones).
 - Protocol designed and documented (`PROTOCOL.md`).
 - ESP32 firmware (pre-4WD, single-Sabertooth version): compiled and
   flashed clean on real hardware (Arduino IDE, ESP32 Dev Module board
@@ -241,22 +246,21 @@ actually wanted later, that's a different sensor (e.g. a potentiometer)
 on an analog pin, not a digital input — confirm which before wiring.
 
 ## Before this drives real motors
-- Confirm BOTH Sabertooths' DIP-switch baud rate actually matches
-  `SABERTOOTH_BAUD` (9600) in the firmware — this was an assumption
-  (Sabertooth's simplified-serial factory default) for the original
-  unit and has never been verified for it either; the new REAR unit
-  has the identical open item, not a free pass because it's new.
+- Confirm the Sabertooths' shared DIP-switch baud rate actually matches
+  `SABERTOOTH_BAUD` (9600) in the firmware. **Partially resolved
+  2026-11-19:** the REAR unit's switches are set identically to the
+  FRONT unit's, so this is now one open item instead of two
+  independent ones — but neither unit's actual switch positions have
+  been read off and checked against the firmware's 9600/simplified-
+  serial assumption. Do that check once, and it covers both units.
 - Compile and flash the updated (4WD, dual-Sabertooth) firmware — not
   yet done on real hardware as of 2026-11-19.
 - Confirm common ground between the ESP32 and the new REAR Sabertooth,
   and that it has its own B+/B- power feed (not daisy-chained off the
   FRONT unit's terminals).
-- **Confirm whether the hardware E-stop relay's cut covers both
-  Sabertooths' main power feed, or only the original (FRONT) one.** If
-  it only covers one, the E-stop no longer stops the rover — this is a
-  real safety gap introduced by the 4WD conversion specifically, not a
-  pre-existing item, and needs checking on the actual wiring before
-  first power-up.
+- ~~Confirm whether the hardware E-stop relay's cut covers both
+  Sabertooths' main power feed.~~ **Confirmed 2026-11-19 (user):** it
+  covers both.
 - Bench-test the watchdog: with the rover's wheels off the ground,
   start driving, then unplug the ESP32's USB-to-Pi link (not the
   motor power) and confirm the drivetrain stops within ~400ms on its

@@ -308,3 +308,27 @@ Reconstructed from the actual code + an external record of the session.)
 - Next step: physically wire the REAR Sabertooth per
   `wiring_diagram.md`, verify both units' DIP switches, confirm E-stop
   coverage, then compile/flash/test before any driving.
+
+## 2026-11-19 — Session 11: E-stop and DIP-switch items confirmed by user
+- User confirmed two of the three open items from Session 10:
+  1. The hardware E-stop relay's cut covers BOTH Sabertooths' power
+     feed (not just the original/FRONT unit's).
+  2. The REAR Sabertooth's DIP switches are set identically to the
+     FRONT unit's.
+- Precision on what (2) does and doesn't resolve: it confirms the two
+  units won't disagree with each other, collapsing "two independent
+  unverified baud assumptions" into one shared one. It does NOT
+  independently confirm that shared setting is actually 9600 baud /
+  simplified serial -- neither unit's physical switches have ever been
+  read off and checked against `SABERTOOTH_BAUD` in the firmware. That
+  remains the one open pre-flight item, now single instead of doubled.
+- Updated `rover/README.md`, `rover/wiring_diagram.md`, and a firmware
+  comment in `esp32_firmware.ino` to reflect both confirmations
+  precisely (not overclaiming the baud assumption is resolved).
+- Remaining open items before first power-up: the shared baud/DIP
+  check above; compiling and flashing the updated 4WD firmware (not
+  yet done); common ground + independent power feed for the REAR unit
+  (not yet confirmed on the physical build); the watchdog bench test
+  (still explicitly deferred per the Session 8 investor-demo decision).
+- Next step: physically wire per `wiring_diagram.md`, do the one
+  shared DIP/baud check, then compile/flash/test.

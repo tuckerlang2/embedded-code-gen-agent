@@ -58,14 +58,15 @@
 #define SABERTOOTH_REAR_TX_PIN 19
 #define SABERTOOTH_REAR_RX_PIN 27  // unused, Sabertooth doesn't talk back
 
-// ASSUMPTION, confirm against each Sabertooth's actual DIP switch
+// ASSUMPTION, confirm against the Sabertooths' actual DIP switch
 // setting before first use: simplified serial baud rates are selectable
 // via onboard DIP switches (common options: 2400/9600/19200/38400).
 // 9600 is the Sabertooth factory default for simplified serial mode.
-// The REAR unit is a second, separately-purchased 2x12 -- its DIP
-// switches have NOT been physically verified against this assumption
-// any more than the FRONT unit's have. Check both before first power-up,
-// not just the new one.
+// User-confirmed (2026-11-19): the REAR unit's DIP switches are set
+// identically to the FRONT unit's -- the two won't disagree with each
+// other. That does NOT by itself confirm the shared setting matches
+// this 9600/simplified-serial assumption; neither unit's switches have
+// been read off and checked against it. One check now covers both.
 #define SABERTOOTH_BAUD 9600
 
 // ADC1 channel (safe to use alongside WiFi, though this project doesn't
